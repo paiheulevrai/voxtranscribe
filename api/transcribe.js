@@ -35,6 +35,22 @@ function normalizeLanguage(value) {
   return "fr";
 }
 
+function filenameForContentType(contentType) {
+  if (contentType.includes("mp4")) {
+    return "segment.mp4";
+  }
+  if (contentType.includes("mpeg")) {
+    return "segment.mp3";
+  }
+  if (contentType.includes("ogg")) {
+    return "segment.ogg";
+  }
+  if (contentType.includes("wav")) {
+    return "segment.wav";
+  }
+  return "segment.webm";
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -60,7 +76,7 @@ export default async function handler(req, res) {
     const audioBlob = new Blob([audioBuffer], { type: contentType });
     const formData = new FormData();
     formData.append("model", process.env.TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
-    formData.append("file", audioBlob, "segment.webm");
+    formData.append("file", audioBlob, filenameForContentType(contentType));
     formData.append("language", language);
     formData.append("response_format", "json");
 

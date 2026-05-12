@@ -20,6 +20,8 @@ const state = {
   restartingSpeech: false,
   speechRunning: false,
   speechCaptureUntil: 0,
+  pendingTranscriptions: 0,
+  serverTranscriptionFailed: false,
 };
 
 const els = {
@@ -135,6 +137,17 @@ function refreshTranscript() {
   els.clearButton.disabled = !combined.trim() && state.segmentIndex === 0;
 }
 
+function appendFinalTranscript(text) {
+  const cleaned = text.trim();
+  if (!cleaned) {
+    return;
+  }
+
+  state.finalTranscript = `${state.finalTranscript} ${cleaned}`.trim();
+  state.interimTranscript = "";
+  refreshTranscript();
+}
+
 function setupSpeechRecognition() {
   state.speechSupported = Boolean(SpeechRecognitionCtor);
   if (!state.speechSupported) {
@@ -221,6 +234,54 @@ function stopSpeechRecognition() {
   }
 }
 
+function languageCode() {
+  return els.languageInput.value.split("-")[0];
+}
+
+async function transcribeSegment(blob, segmentNumber) {
+  if (state.serverTranscriptionFailed) {
+    return;
+  }
+
+  if (blob.size > 24 * 1024 * 1024) {
+    els.speechStatus.textContent = `Segment ${segmentNumber}: audio trop volumineux pour transcription`;
+    return;
+  }
+
+  state.pendingTranscriptions += 1;
+  els.speechStatus.textContent = `Transcription serveur du segment ${segmentNumber}...`;
+
+  try {
+    const response = await fetch(`/api/transcribe?language=${encodeURIComponent(languageCode())}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": blob.type || "audio/webm",
+      },
+      body: blob,
+    });
+
+    if (response.status === 404) {
+      state.serverTranscriptionFailed = true;
+      els.speechStatus.textContent = state.speechSupported
+        ? "API serveur absente, transcription navigateur seulement"
+        : "API serveur absente, transcription indisponible";
+      return;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || `Erreur transcription ${response.status}`);
+    }
+
+    appendFinalTranscript(payload.text || "");
+    els.speechStatus.textContent = `Segment ${segmentNumber} transcrit`;
+  } catch (error) {
+    els.speechStatus.textContent = error.message || "Erreur de transcription serveur";
+  } finally {
+    state.pendingTranscriptions = Math.max(0, state.pendingTranscriptions - 1);
+  }
+}
+
 function startRecording() {
   if (state.recording || !state.mediaRecorder) {
     return;
@@ -290,6 +351,7 @@ function addSegment(blob, startedAt, endedAt) {
   els.segmentsList.prepend(item);
   els.segmentCount.textContent = `${state.segmentIndex} segment${state.segmentIndex > 1 ? "s" : ""}`;
   els.clearButton.disabled = false;
+  return state.segmentIndex;
 }
 
 function setupRecorder() {
@@ -309,7 +371,8 @@ function setupRecorder() {
     const minDuration = Number(els.minDurationInput.value);
     if (state.chunks.length && duration >= minDuration) {
       const blob = new Blob(state.chunks, { type: state.mediaRecorder.mimeType || "audio/webm" });
-      addSegment(blob, state.recordingStartedAt, endedAt);
+      const segmentNumber = addSegment(blob, state.recordingStartedAt, endedAt);
+      transcribeSegment(blob, segmentNumber);
     }
     state.chunks = [];
   };

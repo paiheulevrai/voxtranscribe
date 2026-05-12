@@ -37,10 +37,46 @@ Procédure:
 
 Le mode standalone ne transforme pas le projet en APK natif. C'est le navigateur Android qui exécute l'application installée. Après le premier chargement, les fichiers de l'interface sont mis en cache par le service worker, mais la transcription `SpeechRecognition` peut encore dépendre du service réseau du navigateur.
 
+## Transcription sur Vercel
+
+La transcription navigateur `SpeechRecognition` n'est pas fiable en PWA Android. Le projet inclut donc un endpoint Vercel:
+
+```text
+/api/transcribe
+```
+
+Il reçoit chaque segment audio `.webm` et l'envoie à l'API OpenAI Speech to Text.
+
+Dans Vercel, ajouter ces variables d'environnement au projet:
+
+```text
+OPENAI_API_KEY=sk-...
+TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+```
+
+`TRANSCRIBE_MODEL` est optionnelle. Sans elle, l'endpoint utilise `gpt-4o-mini-transcribe`.
+
+Après avoir ajouté ou modifié les variables, redéployer le projet Vercel. Ne jamais mettre la clé API dans `app.js` ou dans le navigateur.
+
+Diagnostic:
+
+```text
+https://votre-app.vercel.app/api/health
+```
+
+La réponse doit contenir:
+
+```json
+{"ok":true,"openaiKeyConfigured":true,"model":"gpt-4o-mini-transcribe"}
+```
+
+Si `openaiKeyConfigured` vaut `false`, la variable `OPENAI_API_KEY` n'est pas disponible dans le déploiement actif.
+
 ## Notes techniques
 
 - Enregistrement: `MediaRecorder`.
 - Détection de niveau: `AudioContext` + `AnalyserNode`, calcul RMS en dB.
 - Transcription: `SpeechRecognition` / `webkitSpeechRecognition` quand disponible.
-- Le navigateur ne fournit pas d'API standard pour transcrire un blob audio après coup sans moteur externe. Le prototype lance donc la reconnaissance vocale en direct pendant la session d'écoute et ne conserve le texte que pendant les segments enregistrés.
+- Transcription serveur: `/api/transcribe` sur Vercel, avec clé API en variable d'environnement.
+- Le navigateur ne fournit pas d'API standard fiable pour transcrire un blob audio après coup sans moteur externe. Le prototype tente la reconnaissance vocale navigateur quand disponible, puis transcrit aussi les segments via l'endpoint serveur quand il existe.
 - Français et anglais sont sélectionnables manuellement. La détection automatique de langue n'est pas standardisée côté navigateur.
