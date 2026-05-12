@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#17202a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Seuil Audio">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Transcription seuil audio</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Transcription seuil audio</h1>
+          <p>Déclenche l'enregistrement quand le volume dépasse le seuil, puis coupe après silence.</p>
+        </div>
+        <div class="status-pill" id="secureStatus">Initialisation</div>
+      </header>
+
+      <section class="controls" aria-label="Contrôles d'enregistrement">
+        <div class="meter-panel">
+          <div class="meter-head">
+            <span>Niveau micro</span>
+            <strong id="levelLabel">-∞ dB</strong>
+          </div>
+          <div class="meter" aria-hidden="true">
+            <div class="threshold-line" id="thresholdLine"></div>
+            <div class="meter-fill" id="meterFill"></div>
+          </div>
+          <div class="state-row">
+            <span id="recordingState">Arrêté</span>
+            <span id="silenceState">Silence: 0 ms</span>
+          </div>
+        </div>
+
+        <div class="settings">
+          <label>
+            <span>Seuil de déclenchement</span>
+            <output id="thresholdValue">-45 dB</output>
+            <input id="thresholdInput" type="range" min="-70" max="-10" step="1" value="-45">
+          </label>
+
+          <label>
+            <span>Délai sous seuil avant coupure</span>
+            <output id="silenceDelayValue">1200 ms</output>
+            <input id="silenceDelayInput" type="range" min="300" max="5000" step="100" value="1200">
+          </label>
+
+          <label>
+            <span>Durée minimale de segment</span>
+            <output id="minDurationValue">800 ms</output>
+            <input id="minDurationInput" type="range" min="0" max="5000" step="100" value="800">
+          </label>
+
+          <label>
+            <span>Langue de transcription</span>
+            <select id="languageInput">
+              <option value="fr-FR">Français</option>
+              <option value="en-US">English</option>
+              <option value="fr-CA">Français Canada</option>
+              <option value="en-GB">English UK</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="startButton" type="button">Démarrer l'écoute</button>
+          <button id="stopButton" type="button" disabled>Arrêter</button>
+          <button id="exportButton" type="button" disabled>Exporter le texte</button>
+          <button id="clearButton" type="button" disabled>Vider</button>
+        </div>
+      </section>
+
+      <section class="transcript-zone" aria-label="Transcription">
+        <div class="panel-title">
+          <h2>Transcription</h2>
+          <span id="speechStatus">Transcription non démarrée</span>
+        </div>
+        <textarea id="transcriptOutput" spellcheck="true" placeholder="Le texte transcrit apparaîtra ici."></textarea>
+      </section>
+
+      <section class="segments" aria-label="Segments audio">
+        <div class="panel-title">
+          <h2>Segments enregistrés</h2>
+          <span id="segmentCount">0 segment</span>
+        </div>
+        <div id="segmentsList" class="segments-list">
+          <p class="empty">Aucun segment enregistré.</p>
+        </div>
+      </section>
+
+      <section class="notes">
+        <h2>Compatibilité</h2>
+        <p>
+          Le micro exige une page sécurisée: HTTPS ou localhost. Sur Chrome/Edge Android et Windows,
+          la transcription native dépend de l'API SpeechRecognition du navigateur et peut utiliser un service réseau.
+          Pour conserver l'autorisation, utilisez toujours la même URL et réglez le micro sur Autoriser dans les
+          paramètres du site.
+        </p>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
