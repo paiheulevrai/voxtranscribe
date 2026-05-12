@@ -274,7 +274,13 @@ async function transcribeSegment(blob, segmentNumber) {
     }
 
     appendFinalTranscript(payload.text || "");
-    els.speechStatus.textContent = `Segment ${segmentNumber} transcrit`;
+    if (payload.discordError) {
+      els.speechStatus.textContent = `Segment ${segmentNumber} transcrit, Discord: ${payload.discordError}`;
+    } else if (payload.discordPosted) {
+      els.speechStatus.textContent = `Segment ${segmentNumber} transcrit et envoyé sur Discord`;
+    } else {
+      els.speechStatus.textContent = `Segment ${segmentNumber} transcrit`;
+    }
   } catch (error) {
     els.speechStatus.textContent = error.message || "Erreur de transcription serveur";
   } finally {

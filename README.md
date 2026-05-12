@@ -52,11 +52,12 @@ Dans Vercel, ajouter ces variables d'environnement au projet:
 ```text
 OPENAI_API_KEY=sk-...
 TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 ```
 
-`TRANSCRIBE_MODEL` est optionnelle. Sans elle, l'endpoint utilise `gpt-4o-mini-transcribe`.
+`TRANSCRIBE_MODEL` et `DISCORD_WEBHOOK_URL` sont optionnelles. Sans `DISCORD_WEBHOOK_URL`, les transcriptions restent seulement dans l'application.
 
-Après avoir ajouté ou modifié les variables, redéployer le projet Vercel. Ne jamais mettre la clé API dans `app.js` ou dans le navigateur.
+Après avoir ajouté ou modifié les variables, redéployer le projet Vercel. Ne jamais mettre la clé API OpenAI ni le webhook Discord dans `app.js` ou dans le navigateur.
 
 Diagnostic:
 
@@ -67,10 +68,11 @@ https://votre-app.vercel.app/api/health
 La réponse doit contenir:
 
 ```json
-{"ok":true,"openaiKeyConfigured":true,"model":"gpt-4o-mini-transcribe"}
+{"ok":true,"openaiKeyConfigured":true,"discordWebhookConfigured":true,"model":"gpt-4o-mini-transcribe"}
 ```
 
 Si `openaiKeyConfigured` vaut `false`, la variable `OPENAI_API_KEY` n'est pas disponible dans le déploiement actif.
+Si `discordWebhookConfigured` vaut `false`, les transcriptions ne seront pas envoyées sur Discord.
 
 ## Notes techniques
 

@@ -51,6 +51,57 @@ function filenameForContentType(contentType) {
   return "segment.webm";
 }
 
+function splitDiscordMessage(message) {
+  const maxLength = 1800;
+  const chunks = [];
+  let remaining = message;
+
+  while (remaining.length > maxLength) {
+    const splitAt = remaining.lastIndexOf("\n", maxLength);
+    const index = splitAt > 200 ? splitAt : maxLength;
+    chunks.push(remaining.slice(0, index));
+    remaining = remaining.slice(index).trimStart();
+  }
+
+  if (remaining) {
+    chunks.push(remaining);
+  }
+
+  return chunks;
+}
+
+async function postToDiscord(text, language) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  if (!webhookUrl || !text.trim()) {
+    return;
+  }
+
+  const stamp = new Date().toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+    dateStyle: "short",
+    timeStyle: "medium",
+  });
+  const message = `**Transcription audio** (${language}, ${stamp})\n${text.trim()}`;
+
+  for (const chunk of splitDiscordMessage(message)) {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content: chunk,
+        allowed_mentions: { parse: [] },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(`Discord webhook ${response.status}: ${errorText || "échec d'envoi"}`);
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -95,7 +146,18 @@ export default async function handler(req, res) {
     }
 
     const payload = JSON.parse(text);
-    res.status(200).json({ text: payload.text || "" });
+    const transcription = payload.text || "";
+    let discordPosted = false;
+    let discordError = null;
+
+    try {
+      await postToDiscord(transcription, language);
+      discordPosted = Boolean(process.env.DISCORD_WEBHOOK_URL && transcription.trim());
+    } catch (error) {
+      discordError = error.message || "Erreur Discord";
+    }
+
+    res.status(200).json({ text: transcription, discordPosted, discordError });
   } catch (error) {
     res.status(500).json({ error: error.message || "Erreur transcription" });
   }
